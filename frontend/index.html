@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Matcher</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 50px;
+            max-width: 800px;
+        }
+        .card {
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            border-radius: 10px 10px 0 0;
+            padding: 10px 20px;
+        }
+        .result-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .score {
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2>Job Description and Resume Matcher</h2>
+            </div>
+
+            <div class="card-body">
+                <form id="matcherForm" enctype="multipart/form-data">
+
+                    <div class="form-group">
+                        <label for="job_description">Job Description:</label>
+                        <textarea class="form-control" id="job_description" name="job_description" rows="5" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="resumes">Upload Resumes:</label>
+                        <p class="text-muted">Upload PDF or DOCX resumes</p>
+                        <input type="file" class="form-control" id="resumes" name="resumes" multiple required accept=".pdf, .docx">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+                        Match Resumes
+                    </button>
+                </form>
+
+                <!-- Loading -->
+                <div id="loading" class="loading mt-3 d-none">
+                    Processing resumes... (don’t panic)
+                </div>
+
+                <!-- Results -->
+                <div id="results" class="mt-4 d-none">
+                    <h5>Ranking Results</h5>
+                    <p id="totalCount" class="text-muted"></p>
+                    <ul class="list-group result-list" id="resultsList"></ul>
+                </div>
+
+                <!-- Error -->
+                <div id="error" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById("matcherForm");
+        const resultsDiv = document.getElementById("results");
+        const resultsList = document.getElementById("resultsList");
+        const errorDiv = document.getElementById("error");
+        const loadingDiv = document.getElementById("loading");
+        const submitBtn = document.getElementById("submitBtn");
+        const totalCount = document.getElementById("totalCount");
+
+        form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            // Reset UI
+            resultsDiv.classList.add("d-none");
+            errorDiv.classList.add("d-none");
+            loadingDiv.classList.remove("d-none");
+            resultsList.innerHTML = "";
+            submitBtn.disabled = true;
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch("http://127.0.0.1:5000/matcher", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loadingDiv.classList.add("d-none");
+                submitBtn.disabled = false;
+
+                if (!response.ok) {
+                    errorDiv.textContent = data.error || "Something went wrong";
+                    errorDiv.classList.remove("d-none");
+                    return;
+                }
+
+                if (!data.rankings || data.rankings.length === 0) {
+                    errorDiv.textContent = "No resumes found to rank.";
+                    errorDiv.classList.remove("d-none");
+                    return;
+                }
+
+                // Show total
+                totalCount.textContent = `Total resumes ranked: ${data.total_resumes}`;
+
+                // Populate results
+                data.rankings.forEach((item, index) => {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item";
+
+                    li.innerHTML = `
+                        <div>
+                            <strong>#${index + 1}</strong> ${item.filename}
+                        </div>
+                        <span class="badge badge-success badge-pill">
+                            ${item.score.toFixed(2)}%
+                        </span>
+                    `;
+
+                    resultsList.appendChild(li);
+                });
+
+                resultsDiv.classList.remove("d-none");
+
+            } catch (err) {
+                loadingDiv.classList.add("d-none");
+                submitBtn.disabled = false;
+
+                errorDiv.textContent = "Server not reachable. Is Flask running?";
+                errorDiv.classList.remove("d-none");
+            }
+        });
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
