@@ -10,5 +10,3 @@ Werkzeug==3.1.5
 pdfplumber
 python-docx
 scikit-learn
-flask-cors
-sentence-transformers

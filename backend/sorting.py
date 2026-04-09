@@ -6,25 +6,6 @@ from docx import Document
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
-from pdf2image import convert_from_path
-import pytesseract
-
-# Set path to tesseract (IMPORTANT for Windows)
-pytesseract.pytesseract.tesseract_cmd = r"C:/Program Files/Tesseract-OCR/tesseract.exe"
-
-def extract_text_with_ocr(pdf_path):
-    text = ""
-
-    try:
-        images = convert_from_path(pdf_path, poppler_path=r"C:/poppler/Library/bin")
-        for img in images:
-            text += pytesseract.image_to_string(img)
-
-    except Exception as e:
-        print("OCR failed:", e)
-
-    return text
-
 
 # ---------------- CONFIG ---------------- #
 
@@ -189,12 +170,6 @@ def load_resumes():
         try:
             if filename.lower().endswith(".pdf"):
                 text = extract_text_from_pdf(file_path)
-
-                # OCR fallback if no text found
-                if not text.strip() or len(text.strip()) < 50:
-                    print(f"OCR used for: {filename}")
-                    text = extract_text_with_ocr(file_path)
-
             elif filename.lower().endswith(".docx"):
                 text = preprocess_text(extract_text_with_ocr(file_path))
         except Exception:
